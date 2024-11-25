@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Juego de Plataforma</title>
+    <title>Juego Multijugador</title>
     <style>
         body {
             margin: 0;
@@ -13,127 +13,158 @@
         }
         canvas {
             display: block;
-            margin: auto;
             background-color: #4CAF50;
+        }
+        .boss-health-bar {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 20px;
+            background-color: #ccc;
+            border: 2px solid #000;
+        }
+        .boss-health {
+            height: 100%;
+            background-color: red;
+            width: 100%;
         }
     </style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
+    <div class="boss-health-bar">
+        <div class="boss-health" id="bossHealth"></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
 
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-    // Configuración del canvas
-    canvas.width = 800;
-    canvas.height = 400;
+        // Configuración del canvas
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-    // Variables del jugador
-    const player = {
-        x: 50,
-        y: 300,
-        width: 50,
-        height: 50,
-        speed: 5,
-        jumpPower: 15,
-        dy: 0,
-        grounded: false,
-        image: new Image()
-    };
-    player.image.src = "woobie.jpg"; // Cambia esta URL por la imagen del jugador
+        // Variables globales
+        const players = [];
+        const boss = {
+            x: canvas.width / 2 - 50,
+            y: canvas.height / 2 - 50,
+            width: 100,
+            height: 100,
+            health: 100,
+            maxHealth: 100,
+            image: new Image(),
+        };
+        boss.image.src = "villano.jpg";
 
-    // Variables del enemigo
-    const enemy = {
-        x: 600,
-        y: 300,
-        width: 50,
-        height: 50,
-        alive: true,
-        image: new Image()
-    };
-    enemy.image.src = "villano.jpg"; // Cambia esta URL por la imagen del enemigo
+        // Crear música de fondo
+        const music = new Audio("https://www.bensound.com/bensound-music/bensound-badass.mp3");
+        music.loop = true;
+        music.volume = 0.3;
+        music.play();
 
-    // Configuración del suelo
-    const groundHeight = 50;
-
-    // Controles
-    const keys = {
-        left: false,
-        right: false,
-        jump: false,
-        attack: false
-    };
-
-    // Eventos de teclado
-    window.addEventListener("keydown", (e) => {
-        if (e.code === "ArrowLeft") keys.left = true;
-        if (e.code === "ArrowRight") keys.right = true;
-        if (e.code === "Space") keys.jump = true;
-        if (e.code === "KeyA") keys.attack = true;
-    });
-
-    window.addEventListener("keyup", (e) => {
-        if (e.code === "ArrowLeft") keys.left = false;
-        if (e.code === "ArrowRight") keys.right = false;
-        if (e.code === "Space") keys.jump = false;
-        if (e.code === "KeyA") keys.attack = false;
-    });
-
-    // Gravedad
-    const gravity = 0.8;
-
-    // Bucle del juego
-    function gameLoop() {
-        // Limpiar el canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Dibujar suelo
-        ctx.fillStyle = "#654321";
-        ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
-
-        // Actualizar jugador
-        if (keys.left) player.x -= player.speed;
-        if (keys.right) player.x += player.speed;
-        if (keys.jump && player.grounded) {
-            player.dy = -player.jumpPower;
-            player.grounded = false;
+        // Crear un jugador
+        function createPlayer(id, color) {
+            return {
+                id,
+                x: Math.random() * (canvas.width - 50),
+                y: canvas.height - 100,
+                width: 50,
+                height: 50,
+                speed: 5,
+                dy: 0,
+                grounded: false,
+                color,
+            };
         }
 
-        // Gravedad del jugador
-        player.dy += gravity;
-        player.y += player.dy;
+        // Agregar jugadores (local)
+        players.push(createPlayer(1, "blue"));
+        players.push(createPlayer(2, "green")); // Para pruebas locales
 
-        // Limitar al jugador al suelo
-        if (player.y + player.height >= canvas.height - groundHeight) {
-            player.y = canvas.height - groundHeight - player.height;
-            player.dy = 0;
-            player.grounded = true;
-        }
+        // Controles del jugador local (primer jugador)
+        const keys = {
+            left: false,
+            right: false,
+            jump: false,
+            attack: false,
+        };
 
-        // Dibujar jugador
-        ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "ArrowLeft") keys.left = true;
+            if (e.code === "ArrowRight") keys.right = true;
+            if (e.code === "Space") keys.jump = true;
+            if (e.code === "KeyA") keys.attack = true;
+        });
 
-        // Dibujar enemigo
-        if (enemy.alive) {
-            ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
-        }
+        window.addEventListener("keyup", (e) => {
+            if (e.code === "ArrowLeft") keys.left = false;
+            if (e.code === "ArrowRight") keys.right = false;
+            if (e.code === "Space") keys.jump = false;
+            if (e.code === "KeyA") keys.attack = false;
+        });
 
-        // Ataque al enemigo
-        if (keys.attack && enemy.alive) {
-            const playerCenter = player.x + player.width / 2;
-            const enemyCenter = enemy.x + enemy.width / 2;
-            if (Math.abs(playerCenter - enemyCenter) < 50 && Math.abs(player.y - enemy.y) < 50) {
-                enemy.alive = false; // Enemigo "muerto"
+        // Gravedad y físicas
+        const gravity = 0.8;
+
+        // Bucle del juego
+        function gameLoop() {
+            // Limpiar el canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar y actualizar jugadores
+            players.forEach((player) => {
+                if (player === players[0]) { // Solo el jugador local responde a controles
+                    if (keys.left) player.x -= player.speed;
+                    if (keys.right) player.x += player.speed;
+                    if (keys.jump && player.grounded) {
+                        player.dy = -15;
+                        player.grounded = false;
+                    }
+                }
+
+                // Gravedad
+                player.dy += gravity;
+                player.y += player.dy;
+
+                // Colisión con el suelo
+                if (player.y + player.height >= canvas.height) {
+                    player.y = canvas.height - player.height;
+                    player.dy = 0;
+                    player.grounded = true;
+                }
+
+                // Dibujar jugador
+                ctx.fillStyle = player.color;
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+
+                // Ataque al jefe
+                if (keys.attack && boss.health > 0) {
+                    const playerCenter = player.x + player.width / 2;
+                    const bossCenter = boss.x + boss.width / 2;
+                    if (Math.abs(playerCenter - bossCenter) < 100 && Math.abs(player.y - boss.y) < 100) {
+                        boss.health -= 1; // Reduce vida del jefe
+                        if (boss.health < 0) boss.health = 0;
+                    }
+                }
+            });
+
+            // Dibujar jefe
+            if (boss.health > 0) {
+                ctx.drawImage(boss.image, boss.x, boss.y, boss.width, boss.height);
             }
+
+            // Actualizar barra de vida del jefe
+            const bossHealthBar = document.getElementById("bossHealth");
+            bossHealthBar.style.width = (boss.health / boss.maxHealth) * 100 + "%";
+
+            requestAnimationFrame(gameLoop);
         }
 
-        // Llamar al próximo cuadro
-        requestAnimationFrame(gameLoop);
-    }
-
-    // Iniciar el juego
-    gameLoop();
-</script>
+        // Iniciar el juego
+        gameLoop();
+    </script>
 </body>
 </html>

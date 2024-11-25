@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Plataforma</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+            background-color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Configuración del canvas
+    canvas.width = 800;
+    canvas.height = 400;
+
+    // Variables del jugador
+    const player = {
+        x: 50,
+        y: 300,
+        width: 50,
+        height: 50,
+        speed: 5,
+        jumpPower: 15,
+        dy: 0,
+        grounded: false,
+        image: new Image()
+    };
+    player.image.src = "woobie.jpg"; // Cambia esta URL por la imagen del jugador
+
+    // Variables del enemigo
+    const enemy = {
+        x: 600,
+        y: 300,
+        width: 50,
+        height: 50,
+        alive: true,
+        image: new Image()
+    };
+    enemy.image.src = "villano.jpg"; // Cambia esta URL por la imagen del enemigo
+
+    // Configuración del suelo
+    const groundHeight = 50;
+
+    // Controles
+    const keys = {
+        left: false,
+        right: false,
+        jump: false,
+        attack: false
+    };
+
+    // Eventos de teclado
+    window.addEventListener("keydown", (e) => {
+        if (e.code === "ArrowLeft") keys.left = true;
+        if (e.code === "ArrowRight") keys.right = true;
+        if (e.code === "Space") keys.jump = true;
+        if (e.code === "KeyA") keys.attack = true;
+    });
+
+    window.addEventListener("keyup", (e) => {
+        if (e.code === "ArrowLeft") keys.left = false;
+        if (e.code === "ArrowRight") keys.right = false;
+        if (e.code === "Space") keys.jump = false;
+        if (e.code === "KeyA") keys.attack = false;
+    });
+
+    // Gravedad
+    const gravity = 0.8;
+
+    // Bucle del juego
+    function gameLoop() {
+        // Limpiar el canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Dibujar suelo
+        ctx.fillStyle = "#654321";
+        ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+
+        // Actualizar jugador
+        if (keys.left) player.x -= player.speed;
+        if (keys.right) player.x += player.speed;
+        if (keys.jump && player.grounded) {
+            player.dy = -player.jumpPower;
+            player.grounded = false;
+        }
+
+        // Gravedad del jugador
+        player.dy += gravity;
+        player.y += player.dy;
+
+        // Limitar al jugador al suelo
+        if (player.y + player.height >= canvas.height - groundHeight) {
+            player.y = canvas.height - groundHeight - player.height;
+            player.dy = 0;
+            player.grounded = true;
+        }
+
+        // Dibujar jugador
+        ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
+
+        // Dibujar enemigo
+        if (enemy.alive) {
+            ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
+        }
+
+        // Ataque al enemigo
+        if (keys.attack && enemy.alive) {
+            const playerCenter = player.x + player.width / 2;
+            const enemyCenter = enemy.x + enemy.width / 2;
+            if (Math.abs(playerCenter - enemyCenter) < 50 && Math.abs(player.y - enemy.y) < 50) {
+                enemy.alive = false; // Enemigo "muerto"
+            }
+        }
+
+        // Llamar al próximo cuadro
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Iniciar el juego
+    gameLoop();
+</script>
+</body>
+</html>
